@@ -38,14 +38,15 @@ import com.leapmotion.leap.Listener;
  * Leap Motion Controller in JSON format. The following data will be saved:
  * <ul>
  * <li>The frame id</li>
- * <li>Hand information (id, direction, palm position, palm normal, palm velocity, basis, left or right)</li>
+ * <li>Hand information (id, direction, palm position, palm normal, palm velocity, basis, left or right hand)</li>
  * <li>Finger information (id, direction, tip position, tip velocity, bones)</li>
  * <li>Bone information (type, length, width, direction, center, next joint, previous joint, basis)</li>
  * </ul>
  * <br />Since bone information requires a lot of space, it can be excluded from the save file.
  * @author Komposten (aka Jakob Hjelm)
- * @version 1.2.1
+ * @version 1.2.2
  * <br />Latest additions:
+ * <br />- Event handling for controller (dis)connected and service started/stopped.
  * <br />- Additional hand information
  * <br />- Improved the look of the GUI (space between the buttons, separator
  * between the buttons and text area).
@@ -73,7 +74,7 @@ public class DataRecorder extends JFrame implements ActionListener
   {
     super("LeapRecorder");
 
-    buttonStart_ = createButton("Start/reset");
+    buttonStart_ = createButton("Start/Reset");
     buttonStop_  = createButton("Stop");
     buttonSave_  = createButton("Save All");
     buttonSave2_ = createButton("Save w/o bones");
@@ -126,7 +127,7 @@ public class DataRecorder extends JFrame implements ActionListener
     area.setEditable(false);
     area.setLineWrap(true);
     area.setWrapStyleWord(true);
-    area.setMargin(new Insets(2, 5, 2, 2));
+    area.setMargin(new Insets(3, 5, 3, 3));
     area.setBackground(GRAY);
     
     return area;
@@ -139,7 +140,11 @@ public class DataRecorder extends JFrame implements ActionListener
     controller_ = new Controller();
     frameData_  = new LinkedList<FrameData>();
     
+    areaInfo_.setText("Connecting to Leap Motion Controller...");
     controller_.addListener(leapListener_);
+    
+    if (controller_.isConnected())
+      leapListener_.onConnect(controller_);
   }
 
 
@@ -191,6 +196,30 @@ public class DataRecorder extends JFrame implements ActionListener
   
   private Listener leapListener_ = new Listener()
   {
+    @Override
+    public void onConnect(Controller controller)
+    {
+      areaInfo_.setText("Leap Motion Controller connected!");
+    };
+
+    @Override
+    public void onDisconnect(Controller controller)
+    {
+      areaInfo_.setText("Controller disconnected!");
+    };
+    
+    @Override
+    public void onServiceConnect(Controller arg0)
+    {
+      areaInfo_.setText("Leap Service started!");
+    }
+    
+    @Override
+    public void onServiceDisconnect(Controller arg0)
+    {
+      areaInfo_.setText("Leap Service stopped!");
+    }
+    
     @Override
     public void onFrame(Controller controller)
     {

@@ -3,7 +3,7 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="lib" path="libs/leap/LeapJava.jar">
 		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="Tests/libs/leap/leap-natives-x64"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="LeapRecorder/libs/leap/leap-natives-x64"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="libs/gson/gson-2.2.4.jar">
