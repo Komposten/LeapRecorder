@@ -25,6 +25,7 @@ import javax.swing.JTextArea;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
 
+import komposten.utilities.tools.LogUtils;
 import komposten.utilities.tools.Logger;
 
 import com.google.gson.Gson;
@@ -187,7 +188,7 @@ public class DataRecorder extends JFrame implements ActionListener
       catch (IOException e)
       {
         JOptionPane.showMessageDialog(this, e.getMessage(), "An exception occured!", JOptionPane.ERROR_MESSAGE);
-        Logger.log(Logger.WRITEERROR, "DataRecorder", "Unable to open the directory!", e, false);
+        LogUtils.log(Logger.WRITEERROR, "DataRecorder", "Unable to open the directory!", e, false);
       }
     }
   }
@@ -235,7 +236,7 @@ public class DataRecorder extends JFrame implements ActionListener
       {
         String msg = "An exception occured while processing a frame, terminating program!";
         JOptionPane.showMessageDialog(DataRecorder.this, msg, "An exception occured!", JOptionPane.ERROR_MESSAGE);
-        Logger.log("EXCEPTION", "DataRecorder", msg, e, false);
+        LogUtils.log("EXCEPTION", "DataRecorder", msg, e, false);
         
         System.exit(1);
       }
@@ -275,7 +276,7 @@ public class DataRecorder extends JFrame implements ActionListener
     catch (IOException e)
     {
       JOptionPane.showMessageDialog(this, e.getMessage(), "An exception occured!", JOptionPane.ERROR_MESSAGE);
-      Logger.log(Logger.WRITEERROR, "DataRecorder", "An exception occured when saving!", e, false);
+      LogUtils.log(Logger.WRITEERROR, "DataRecorder", "An exception occured when saving!", e, false);
     }
     
     try
@@ -285,7 +286,7 @@ public class DataRecorder extends JFrame implements ActionListener
     }
     catch (IOException e)
     {
-      Logger.log("ERROR", "DataRecorder", "Could not close the writer!", e, false);
+      LogUtils.log("ERROR", "DataRecorder", "Could not close the writer!", e, false);
     }
   }
   
@@ -302,7 +303,7 @@ public class DataRecorder extends JFrame implements ActionListener
     {
       String msg = "An exception occured, terminating program!";
       JOptionPane.showMessageDialog(recorder, msg, "An exception occured!", JOptionPane.ERROR_MESSAGE);
-      Logger.log("EXCEPTION", "DataRecorder", msg, e, false);
+      LogUtils.log("EXCEPTION", "DataRecorder", msg, e, false);
       
       System.exit(1);
     }

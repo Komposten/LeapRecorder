@@ -6,6 +6,8 @@ package komposten.utilities.tools;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.URLDecoder;
 import java.util.Calendar;
 
@@ -14,14 +16,30 @@ import javax.swing.JOptionPane;
 
 
 /**
- * This class holds a static method for logging exceptions in the file "log.txt"
- * (which is created at the top of the classpath).
+ * A utility class for logging messages and exceptions to either a file or a stream.
+ * @see {@link LogUtils}
+ * @author Jakob Hjelm
  * @version
- * <b>1.2.0</b> <br />
+ * <b>1.3.1</b> <br />
+ * <ul>
+ * <li>Replaced <code>Exception</code> with <code>Throwable</code>.</li>
+ * <li>Added support for newlines in the exception message.</li>
+ * <li>The first line of each cause is now always written.</li>
+ * </ul>
+ * <b>Older</b> <br />
+ * 1.3.0 <br />
+ * <ul>
+ * <li>Removed <code>static</code> from all log methods.</li>
+ * <li>Added support for changing log file, or to use a stream.</li>
+ * <li>Added <code>write(String, String, OutputStream)</code>.</li>
+ * <li>Added <code>writeToFile(String)</code> and <code>writeToStream(OutputStream)</code>.</li>
+ * <li>Added <code>dispose()</code>.</li>
+ * <li>Updated JavaDoc to match the new system.</li>
+ * </ul>
+ * 1.2.0 <br />
  * <ul>
  * <li>Added <code>logMsg(String)</code> and <code>logMsg(String, String)</code>.</li>
  * </ul>
- * <b>Older</b> <br />
  * 1.1.0 <br />
  * <ul>
  * <li>Added a <code>log()</code> method with a <code>className</code> parameter.</li>
@@ -48,7 +66,7 @@ import javax.swing.JOptionPane;
 public final class Logger
 {
   /**
-   * The path to the log file utilised by this class.
+   * The path to the default log file utilised by this class.
    */
 	public static final String FILEPATH = getProgramDir() + File.separator + "log.txt";
 
@@ -68,10 +86,8 @@ public final class Logger
 	private static String newLine = System.getProperty("line.separator");
 	
 	
-	
-	private Logger() {}
-	
-	
+	private String       filePath_;
+	private OutputStream stream_;
 	
 	private static String getProgramDir()
 	{
@@ -80,11 +96,7 @@ public final class Logger
     try
     {
       path = URLDecoder.decode(path, "UTF-8");
-    
-//      if (path.endsWith(".jar"))
-//      {
-        path  = new File(path).getParent();
-//      }
+      path = new File(path).getParent();
     }
     catch (IOException e)
     {
@@ -100,149 +112,176 @@ public final class Logger
 	}
   
   
+  /**
+   * Creates a new Logger that writes to the default file (see {@link #FILEPATH}}.
+   */
+  public Logger()
+  {
+    this(FILEPATH);
+  }
+  
+  /**
+   * Creates a new Logger that writes to the specified file.
+   * @param filePath The path to the file the Logger logs to.
+   */
+  public Logger(String filePath)
+  {
+    filePath_ = filePath;
+  }
+  
+  /**
+   * Creates a new Logger that writes to the specified stream.
+   * <br /><b>Note:</b> The stream will not be closed until {@link #dispose()} is invoked,
+   * or the stream is closed manually.
+   * @param stream The stream to write to.
+   */
+  public Logger(OutputStream stream)
+  {
+    stream_ = stream;
+  }
+  
+  
+  
+  /**
+   * Sets this Logger to write to the file with the specified path.
+   * <br /><b>Note:</b> If this Logger previously has been assigned an <code>OutputStream</code>,
+   * that stream will not be closed! In order to close it, invoke {@link #dispose()} prior to
+   * invoking this method.
+   * @param path The new target file.
+   */
+  public void writeToFile(String path)
+  {
+    filePath_ = path;
+    stream_   = null;
+  }
+  
+  
+
+  /**
+   * Sets this Logger to write to the provided stream.
+   * @param stream The new target stream.
+   * <br /><b>Note:</b> If this Logger previously has been assigned an <code>OutputStream</code>,
+   * that stream will not be closed! In order to close it, invoke {@link #dispose()} prior to
+   * invoking this method.
+   */
+  public void writeToStream(OutputStream stream)
+  {
+    filePath_ = null;
+    stream_   = stream;
+  }
+  
+  
   
   /**
    * Logs the given <code>Exception</code> (which can be <code>null</code>) together with the time and message in 
-   * the file specified by <code>Logger.FILEPATH</code>.
+   * the log file or stream.
    * @param errorType - A <code>String</code> saying what kind of error occurred (e.g. "WRITE ERROR"). A set 
    * of standard messages can be found as constants in this class.
-   * @param errorMsg  - The message to be displayed after the error type.
-   * @param e         - An <code>Exception</code> (can be <code>null</code>), from which additional information of the error 
-   * will be taken.
-   * @param exceptionMsgOnly - If only the <code>Exception</code>'s message should be written, and not the 
+   * @param errorMsg  - The message to be displayed after the error type  (may contain new lines).
+   * @param t         - A <code>Throwable</code> from which additional information of the error 
+   * will be taken. (May be <code>null</code>)
+   * @param throwableMsgOnly - If only the <code>Throwable</code>'s message should be written, and not the 
    * entire stack trace.
    * @return True if the message was successfully logged, false otherwise.
    */
 	@Deprecated
-  public static boolean log(String errorType, String errorMsg, Exception e, boolean exceptionMsgOnly)
+  public boolean log(String errorType, String errorMsg, Throwable t, boolean throwableMsgOnly)
   {
-    return log(errorType, "<unspecified>", errorMsg, e, exceptionMsgOnly);
+    return log(errorType, "<unspecified>", errorMsg, t, throwableMsgOnly);
   }
 	
 	
 	
 	/**
 	 * Logs the given <code>Exception</code> (which can be <code>null</code>) together with the time and message in 
-	 * the file specified by <code>Logger.FILEPATH</code>.
+	 * the log file or stream.
 	 * @param errorType - A <code>String</code> saying what kind of error occurred (e.g. "WRITE ERROR"). A set 
 	 * of standard messages can be found as constants in this class.
 	 * @param className - The name of the class within which the error occurred (can be null or zero-length).
-	 * @param errorMsg  - The message to be displayed after the error type.
-	 * @param e         - An <code>Exception</code> (can be <code>null</code>), from which additional information of the error 
-	 * will be taken.
-	 * @param exceptionMsgOnly - If only the <code>Exception</code>'s message should be written, and not the 
+	 * @param errorMsg  - The message to be displayed after the error type (may contain new lines).
+	 * @param t         - A <code>Throwable</code> from which additional information of the error 
+	 * will be taken. (May be <code>null</code>)
+	 * @param throwableMsgOnly - If only the <code>Throwable</code>'s message should be written, and not the 
 	 * entire stack trace.
 	 * @return True if the message was successfully logged, false otherwise.
 	 */
-	public static boolean log(String errorType, String className, String errorMsg, Exception e, boolean exceptionMsgOnly)
+	public boolean log(String errorType, String className, String errorMsg, Throwable t, boolean throwableMsgOnly)
 	{
-		try
+		StringBuilder logMsg = new StringBuilder();
+		Calendar      date   = Calendar.getInstance();
+
+		String month  = MONTHS[date.get(Calendar.MONTH)];
+		String day    = Integer.toString(date.get(Calendar.DAY_OF_MONTH));
+		String year   = Integer.toString(date.get(Calendar.YEAR));
+		String hour   = Integer.toString(date.get(Calendar.HOUR_OF_DAY));
+		String minute = Integer.toString(date.get(Calendar.MINUTE));
+		String second = Integer.toString(date.get(Calendar.SECOND));
+
+		if (hour.length() == 1)
+			hour = "0" + hour;
+		if (minute.length() == 1)
+			minute = "0" + minute;
+		if (second.length() == 1)
+			second = "0" + second;
+		
+		logMsg.append(newLine + "/=|" + month + " " + day +
+				", " + year + " " + hour + ":" + minute + ":" + second);
+		if (className != null && className.length() > 0)
+		  logMsg.append(" - Class: " + className);
+		logMsg.append("|");
+		logMsg.append(newLine + "|-|" + errorType.toUpperCase() + ":");
+		logMsg.append(" " + errorMsg.replaceAll("\n\r|\r\n|\r|\n|" + newLine + "", newLine + "|----|"));
+		
+		if (t != null)
 		{
-			File log = new File(FILEPATH);
+			logMsg.append(newLine + "|-|" + t.toString());
 			
-			if (!log.exists())
-				if (!log.createNewFile())
-				  JOptionPane.showMessageDialog(null, "Could not create the log file!", "File Creation Error", JOptionPane.ERROR_MESSAGE);
-			
-			StringBuilder logMsg = new StringBuilder();
-			Calendar      date   = Calendar.getInstance();
-
-			String month  = MONTHS[date.get(Calendar.MONTH)];
-			String day    = Integer.toString(date.get(Calendar.DAY_OF_MONTH));
-			String year   = Integer.toString(date.get(Calendar.YEAR));
-			String hour   = Integer.toString(date.get(Calendar.HOUR_OF_DAY));
-			String minute = Integer.toString(date.get(Calendar.MINUTE));
-			String second = Integer.toString(date.get(Calendar.SECOND));
-
-			if (hour.length() == 1)
-				hour = "0" + hour;
-			if (minute.length() == 1)
-				minute = "0" + minute;
-			if (second.length() == 1)
-				second = "0" + second;
-			
-			logMsg.append(newLine + "/=|" + month + " " + day +
-					", " + year + " " + hour + ":" + minute + ":" + second);
-			if (className != null && className.length() > 0)
-			  logMsg.append(" - Class: " + className);
-			logMsg.append("|");
-			logMsg.append(newLine + "|-|" + errorType.toUpperCase() + ":");
-			logMsg.append(" " + errorMsg);
-			
-			if (e != null)
+			if (!throwableMsgOnly)
 			{
-				logMsg.append(newLine + "|-|" + e.toString());
+				for (StackTraceElement st : t.getStackTrace())
+					logMsg.append(newLine + "|---->" + st.toString());
 				
-				if (!exceptionMsgOnly)
+				while (t.getCause() != null)
 				{
-					for (StackTraceElement st : e.getStackTrace())
-						logMsg.append(newLine + "|---->" + st.toString());
-					
-					while (e.getCause() != null)
-					{
-					  if ((e.getCause() instanceof Exception))
-					  {
-  					  e = (Exception) e.getCause();
-  					  
-  					  logMsg.append(newLine + "|-|" + CAUSED_BY);
-  					  logMsg.append(newLine + "|-|" + e.toString());
-  					  
-  					  for (StackTraceElement st : e.getStackTrace())
-  					    logMsg.append(newLine + "|---->" + st.toString());
-					  }
-					  else
-					  {
-              logMsg.append(newLine + "|-|" + CAUSED_BY);
-              logMsg.append(newLine + "|-|" + e.getCause().toString());
-              
-              for (StackTraceElement st : e.getCause().getStackTrace())
-                logMsg.append(newLine + "|----->" + st.toString());
-              
-              break;
-					  }
-					}
-				}
-				else
-				{
-				  while (e.getCause() != null)
-				  {
-				    e = (Exception) e.getCause();
-				    logMsg.append(newLine);
-  	        logMsg.append("|-|" + CAUSED_BY);
-  	        logMsg.append(newLine);
-            logMsg.append("|-|" + e.toString());
-            logMsg.append("|");
-				  }
+				  t = t.getCause();
 				  
-				  logMsg.append(newLine + "---->At: " + e.getStackTrace()[0]);
+				  logMsg.append(newLine + "|-|" + CAUSED_BY);
+				  logMsg.append(newLine + "|-|" + t.toString());
+				  
+				  for (StackTraceElement st : t.getStackTrace())
+				    logMsg.append(newLine + "|---->" + st.toString());
 				}
 			}
-			
-			logMsg.append(newLine);
-			
-			FileWriter writer = new FileWriter(log, true);
-			writer.write(logMsg.toString());
-			writer.flush();
-			writer.close();
-		}
-		catch (IOException ioe)
-		{
-		  System.out.println("Logger encountered an exception while writing to \"" + FILEPATH + "\": ");
-		  ioe.printStackTrace();
-			return false;
+			else
+			{
+        logMsg.append(newLine + "|---->" + t.getStackTrace()[0]);
+        
+			  while (t.getCause() != null)
+			  {
+			    t = t.getCause();
+			    logMsg.append(newLine);
+	        logMsg.append("|-|" + CAUSED_BY);
+	        logMsg.append(newLine);
+          logMsg.append("|-|" + t.toString());
+          logMsg.append(newLine + "|---->" + t.getStackTrace()[0]);
+			  }
+			  
+			}
 		}
 		
-		return true;
+		logMsg.append(newLine);
+		
+		return write(logMsg.toString(), filePath_, stream_);
 	}
 	
 	
 	
 	/**
-	 * Prints the specified message to the log file (see {@link #FILEPATH}).
+	 * Prints the specified message to the log file or stream.
 	 * @param message The message to log.
 	 * @return True if the message was logged, false otherwise.
 	 */
-	public static boolean logMsg(String message)
+	public boolean logMsg(String message)
 	{
 	  return log("INFO", "", message, null, true);
 	}
@@ -250,13 +289,82 @@ public final class Logger
 	
 	
 	/**
-   * Prints the specified message to the log file (see {@link #FILEPATH}).
+   * Prints the specified message to the log file or stream.
    * @param message The message to log.
    * @param label The label for the message (e.g. "INFO" or "WARNING").
    * @return True if the message was logged, false otherwise.
 	 */
-	public static boolean logMsg(String label, String message)
+	public boolean logMsg(String label, String message)
 	{
 	  return log(label, "", message, null, true);
+	}
+	
+	
+	
+	/**
+	 * Writes a message to the file specified by <code>filePath</code> or to the stream
+	 * if <code>filePath == null</code>.
+	 * @param filePath The path to a file, or <code>null</code> if the stream should be used.
+	 * @param stream A stream to write to, or <code>null</code> if <code>filePath</code> should be used.
+	 * @return True if the data was successfully written to either a file or a stream, false
+	 * otherwise.
+	 */
+	private boolean write(String data, String filePath, OutputStream stream)
+	{
+	  if (filePath != null)
+	  {
+      try
+      {
+        File log = new File(filePath);
+        
+        if (!log.exists())
+          if (!log.createNewFile())
+            System.err.println("Logger - write(): Could not create the log file!");
+        
+        FileWriter writer = new FileWriter(log, true);
+        writer.write(data.toString());
+        writer.flush();
+        writer.close();
+      }
+      catch (IOException e)
+      {
+        System.out.println("Logger encountered an exception while writing to \"" + filePath + "\": ");
+        e.printStackTrace();
+        return false;
+      }
+      
+      return true;
+	  }
+	  else if (stream != null)
+	  {
+	    PrintStream print = new PrintStream(stream);
+	    
+	    print.println(data);
+	    print.flush();
+	    
+	    return true;
+	  }
+	  else
+	    return false;
+	}
+	
+	
+	
+	/**
+	 * Closes this Logger's <code>OutputStream</code> if either {@link #Logger2(OutputStream)}
+	 * or {@link #writeToStream(OutputStream)} has been used.
+	 */
+	public void dispose()
+	{
+	  try
+	  {
+  	  if (stream_ != null)
+  	    stream_.close();
+	  }
+	  catch (IOException e)
+	  {
+      System.out.println("Logger encountered an exception while closing its stream: ");
+      e.printStackTrace();
+	  }
 	}
 }
